@@ -1,0 +1,20 @@
+/* Global mobile improvements */
+@media (max-width: 640px) {
+  /* Avoid iOS input zoom by keeping font-size >= 16px */
+  input, select, textarea, button {
+    font-size: 16px;
+  }
+  /* Improve tap targets */
+  button, .btn {
+    min-height: 44px;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+}
+
+/* Respect notches / safe areas for fixed headers/footers */
+.safe-area-top { padding-top: env(safe-area-inset-top); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Lock body when a modal is open (utility, optional) */
+body.modal-open { overflow: hidden; }

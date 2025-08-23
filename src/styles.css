@@ -1,0 +1,234 @@
+/* Custom color variables */
+:root {
+  --color-navy: #001f3f;
+  --color-pink: #ff69b4;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-700: #374151;
+  --color-green-500: #10b981;
+  --color-red-500: #ef4444;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-white);
+  color: var(--color-black);
+  line-height: 1.6;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-navy);
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--color-gray-700);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--color-navy);
+  color: var(--color-white);
+}
+
+.btn-primary:hover {
+  background-color: #001a35;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--color-white);
+  color: var(--color-navy);
+  border: 2px solid var(--color-navy);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-gray-100);
+  transform: translateY(-1px);
+}
+
+.btn-accent {
+  background-color: var(--color-pink);
+  color: var(--color-white);
+}
+
+.btn-accent:hover {
+  background-color: #ff4da6;
+  transform: translateY(-1px);
+}
+
+/* Navigation */
+.nav {
+  background-color: var(--color-navy);
+  color: var(--color-white);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link {
+  color: var(--color-white);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+/* Quiz Card */
+.quiz-card {
+  background-color: var(--color-white);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid var(--color-gray-200);
+}
+
+.quiz-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-card-header {
+  background-color: var(--color-navy);
+  color: var(--color-white);
+  padding: 1.5rem;
+}
+
+/* Progress Bar */
+.progress-container {
+  width: 100%;
+  background-color: var(--color-gray-200);
+  border-radius: 9999px;
+  height: 0.75rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--color-pink);
+  border-radius: 9999px;
+  transition: width 0.5s ease-in-out;
+}
+
+/* Quiz Answer Options */
+.answer-option {
+  padding: 1.25rem;
+  border: 2px solid var(--color-gray-200);
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--color-white);
+  margin-bottom: 0.75rem;
+}
+
+.answer-option:hover {
+  border-color: var(--color-pink);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.answer-option.selected {
+  border-color: var(--color-pink);
+  background-color: rgba(255, 105, 180, 0.05);
+}
+
+.answer-option.correct {
+  border-color: var(--color-green-500);
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.answer-option.incorrect {
+  border-color: var(--color-red-500);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+/* Form Elements */
+input, textarea, select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-gray-200);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-pink);
+  box-shadow: 0 0 0 3px rgba(255, 105, 180, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .quiz-card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .answer-option {
+    padding: 1rem;
+  }
+  
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.5rem; }
+  h4 { font-size: 1.25rem; }
+}
+
+/* Utility Classes */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mt-8 { margin-top: 2rem; }
+.mb-8 { margin-bottom: 2rem; }

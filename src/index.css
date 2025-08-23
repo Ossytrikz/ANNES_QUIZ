@@ -1,0 +1,269 @@
+/*
+ * Anne's Quiz - Main Stylesheet
+ * Using CSS Custom Properties for theming
+ */
+
+  :root {
+    --color-navy: 0, 31, 63;        /* Navy Blue */
+    --color-pink: 255, 105, 180;    /* Pink */
+    --color-pink-dark: 255, 112, 184; /* Brighter pink for dark mode */
+    --color-black: 0, 0, 0;         /* Black */
+    --color-dark-bg: 17, 24, 39;    /* Dark background */
+    --color-darker-bg: 10, 10, 15;  /* Darker background */
+  }
+
+  /* Custom color classes */
+  .bg-navy { background-color: rgb(var(--color-navy)); }
+  .text-navy { color: rgb(var(--color-navy)); }
+  .border-navy { border-color: rgb(var(--color-navy)); }
+  .hover\:bg-navy:hover { background-color: rgba(var(--color-navy), 0.9); }
+  
+  .bg-pink { background-color: rgb(var(--color-pink)); }
+  .text-pink { 
+    color: rgb(var(--color-pink));
+    .dark & {
+      color: rgb(var(--color-pink-dark));
+    }
+  }
+  .border-pink { border-color: rgb(var(--color-pink)); }
+  .hover\:bg-pink:hover { background-color: rgba(var(--color-pink), 0.9); }
+
+  /* Base Styles */
+  body {
+    @apply bg-white text-gray-900 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+
+  /* Dark mode overrides */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark body {
+    @apply bg-gray-900 text-pink-100;
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    @apply text-pink-300;
+  }
+
+  .dark a {
+    @apply text-pink-400 hover:text-pink-300;
+  }
+
+  /* Form Components */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    @apply w-full border border-gray-300 dark:border-pink-300/30 rounded-lg px-4 py-2 
+           bg-white dark:bg-gray-800/80 
+           text-gray-900 dark:text-pink-100 
+           placeholder-gray-500 dark:placeholder-pink-300/60
+           focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 
+           transition-colors duration-200;
+  }
+
+  input[type="checkbox"] {
+    @apply h-4 w-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500 dark:border-gray-600 dark:bg-gray-800 dark:checked:bg-pink-600 dark:focus:ring-pink-500;
+  }
+
+  button, [type='button'], [type='submit'] {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium 
+           transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 
+           focus:ring-pink-500 disabled:opacity-50 disabled:pointer-events-none
+           text-white bg-pink-600 hover:bg-pink-700
+           dark:bg-pink-700 dark:hover:bg-pink-600
+           dark:focus:ring-pink-400;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-black;
+    line-height: 1.2;
+  }
+
+  h1 { 
+    @apply text-4xl md:text-5xl mb-6;
+    color: rgb(var(--color-navy));
+  }
+  
+  h2 { 
+    @apply text-3xl md:text-4xl mb-5;
+    color: rgb(var(--color-navy));
+  }
+  
+  h3 { 
+    @apply text-2xl md:text-3xl mb-4;
+    color: rgb(var(--color-navy));
+  }
+  
+  h4 { 
+    @apply text-xl md:text-2xl mb-3;
+    color: rgb(var(--color-navy));
+  }
+
+  p {
+    @apply mb-4 text-gray-800;
+  }
+
+  /* Form Elements */
+  input, textarea, select {
+    @apply w-full rounded-xl border-2 border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-200;
+  }
+
+  /* Buttons */
+  button, .btn {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 ease-in-out transform 
+           hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500;
+  }
+
+  .btn-primary {
+    @apply bg-navy text-white hover:bg-opacity-90 active:bg-opacity-100;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-navy border-2 border-navy hover:bg-gray-50 active:bg-gray-100;
+  }
+
+  .btn-accent {
+    @apply bg-pink text-white hover:bg-opacity-90 active:bg-opacity-100;
+  }
+
+  /* Navigation */
+  .nav {
+    @apply bg-navy text-white shadow-md;
+  }
+
+  .nav-link {
+    @apply px-4 py-3 rounded-lg transition-all duration-200 text-white hover:bg-white hover:bg-opacity-10;
+  }
+
+  .nav-link.active {
+    @apply bg-white bg-opacity-20 font-semibold;
+  }
+
+  /* Quiz Card */
+  .quiz-card {
+    @apply bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 
+           hover:shadow-xl border border-gray-100 hover:-translate-y-1;
+  }
+
+  .quiz-card-header {
+    @apply p-6 bg-navy text-white;
+  }
+
+  /* Progress Bar */
+  .progress-container {
+    @apply w-full bg-gray-200 rounded-full h-3 overflow-hidden;
+  }
+  
+  .progress-bar {
+    @apply h-full bg-pink rounded-full transition-all duration-500 ease-in-out;
+  }
+
+  /* Quiz Answer Options */
+  .answer-option {
+    @apply p-5 border-2 border-gray-200 rounded-xl cursor-pointer transition-all 
+           duration-200 hover:border-pink-500 hover:shadow-md bg-white;
+  }
+
+  .answer-option:hover {
+    @apply transform -translate-y-0.5;
+  }
+
+  .answer-option.selected {
+    @apply border-pink-500 bg-pink-50;
+  }
+
+  .answer-option.correct {
+    @apply border-green-500 bg-green-50;
+  }
+
+  .answer-option.incorrect {
+    @apply border-red-500 bg-red-50;
+  }
+
+  /* Score Display */
+  .score-display {
+    @apply text-4xl font-bold text-navy mb-6;
+  }
+
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .quiz-card {
+      @apply rounded-none border-x-0;
+    }
+    
+    .answer-option {
+      @apply p-4;
+    }
+  }
+
+
+/* High-contrast inputs */
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], 
+textarea, select {
+  color: #111827; /* gray-900 */
+  background: #ffffff;
+  border-color: #d1d5db; /* gray-300 */
+}
+:root.dark input[type="text"], :root.dark input[type="number"], :root.dark input[type="email"], :root.dark input[type="password"],
+:root.dark textarea, :root.dark select,
+.dark input[type="text"], .dark input[type="number"], .dark input[type="email"], .dark input[type="password"],
+.dark textarea, .dark select {
+  color: #f3f4f6; /* gray-100 */
+  background: #111827; /* gray-900 */
+  border-color: #4b5563; /* gray-600 */
+}
+::placeholder { color: rgba(107,114,128,0.8); } /* gray-500 */
+.dark ::placeholder { color: rgba(156,163,175,0.8); } /* gray-400 */
+
+
+/* ---- Accessibility & Contrast Tweaks (added by ChatGPT) ---- */
+input, textarea, select {
+  --placeholder-opacity: 1;
+}
+input::placeholder,
+textarea::placeholder {
+  opacity: 1; /* ensure placeholder is visible in dark mode */
+}
+/* Dark mode: ensure strong contrast for inputs */
+@media (prefers-color-scheme: dark) {
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    background-color: rgba(31, 41, 55, 0.95); /* ~gray-800 */
+    color: #F9FAFB; /* near-white */
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(249, 168, 212, 0.9); /* bright pink placeholder */
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.5); /* pink ring */
+    border-color: transparent;
+  }
+}

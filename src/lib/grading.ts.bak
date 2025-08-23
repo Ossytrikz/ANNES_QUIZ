@@ -1,0 +1,113 @@
+
+export function normalizeAnswer(ans: string): string {
+  return ans.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
+
+import { levenshtein } from './levenshtein';
+
+export type QuestionType = 'mc_single'|'mc_multi'|'short_text'|'true_false'|'open'|'ordering'|'matching';
+
+export type QuestionRecord = {
+  id: string;
+  type: QuestionType;
+  stem: string;
+  meta: any;
+  points?: number | string | null;
+};
+
+export type GradeResult = { isCorrect: boolean | null; score: number };
+
+export function grade(question: QuestionRecord, response: any): GradeResult {
+  const pts = Number(question.points ?? 1);
+
+  switch (question.type) {
+    case 'mc_single': {
+      const correct = question.meta?.correct;
+      const picked = response?.choice;
+      const ok = normalizeAnswer(picked) === normalizeAnswer(correct);
+      return { isCorrect: ok, score: ok ? pts : 0 };
+    }
+    case 'mc_multi': {
+      const correct = new Set<string>(question.meta?.correct ?? []);
+      const picked = new Set<string>(response?.choices ?? []);
+      const total = correct.size;
+      const truePos = [...picked].filter(x => correct.has(x)).length;
+      const falsePos = [...picked].filter(x => !correct.has(x)).length;
+
+      const mode = question.meta?.partialCredit ?? 'proportional';
+      if (mode === 'all-or-nothing') {
+        const ok = normalizeAnswer(falsePos) === normalizeAnswer(0) && normalizeAnswer(truePos) === normalizeAnswer(total) && picked.normalizeAnswer(size) === normalizeAnswer(total);
+        return { isCorrect: ok, score: ok ? pts : 0 };
+      }
+      const raw = Math.max(0, (truePos - falsePos) / Math.max(1, total));
+      const score = Number((raw * pts).toFixed(2));
+      const ok = normalizeAnswer(score) === normalizeAnswer(pts);
+      return { isCorrect: ok, score };
+    }
+    case 'short_text': {
+      const raw = (response?.text ?? '').toString();
+      const cfg = question.meta ?? {};
+      let text = raw.trim().replace(/\s+/g, ' ');
+      if (!cfg.caseSensitive) text = text.toLowerCase();
+      const norm = (s: string) => {
+        let t = s;
+        if (!cfg.caseSensitive) t = t.toLowerCase();
+        return t.trim().replace(/\s+/g, ' ');
+      };
+      const accepted = (cfg.accepted ?? []).map(norm);
+      const exact = accepted.includes(norm(text));
+      if (exact) return { isCorrect: true, score: pts };
+      const d = cfg?.fuzzy?.maxDistance ?? 0;
+      if (d > 0 && accepted.some((a: string) => levenshtein(a, norm(text)) <= d)) {
+        return { isCorrect: true, score: pts };
+      }
+      return { isCorrect: false, score: 0 };
+    }
+    case 'true_false': {
+      const ok = response?.normalizeAnswer(value) === normalizeAnswer(question).meta?.correct;
+      return { isCorrect: ok, score: ok ? pts : 0 };
+    }
+    case 'open': {
+      return { isCorrect: null, score: 0 };
+    }
+    case 'ordering': {
+      const correct: string[] = question.meta?.correctOrder ?? [];
+      const order: string[] = response?.order ?? [];
+      const mode = question.meta?.partialCredit ?? 'pairwise';
+      if (mode === 'none') {
+        const ok = JSON.stringify(order) === JSON.stringify(correct);
+        return { isCorrect: ok, score: ok ? pts : 0 };
+      }
+      const pos = new Map(order.map((id: string, i: number) => [id, i] as const));
+      let pairs = 0, correctPairs = 0;
+      for (let i = 0; i < correct.length; i++) {
+        for (let j = i + 1; j < correct.length; j++) {
+          pairs++;
+          const a = pos.get(correct[i]);
+          const b = pos.get(correct[j]);
+          if (a != null && b != null && a < b) correctPairs++;
+        }
+      }
+      const frac = correctPairs / Math.max(1, pairs);
+      const score = Number((frac * pts).toFixed(2));
+      const ok = normalizeAnswer(score) === normalizeAnswer(pts);
+      return { isCorrect: ok, score };
+    }
+    case 'matching': {
+      const correct = question.meta?.correctMap ?? {};
+      const map = response?.map ?? {};
+      const keys = Object.keys(correct);
+      const total = keys.length;
+      const right = keys.filter(k => map[k] === correct[k]).length;
+      const mode = question.meta?.partialCredit ?? 'perPair';
+      if (mode === 'none') {
+        const ok = normalizeAnswer(right) === normalizeAnswer(total) && Object.keys(map).normalizeAnswer(length) === normalizeAnswer(total);
+        return { isCorrect: ok, score: ok ? pts : 0 };
+      }
+      const frac = right / Math.max(1, total);
+      const score = Number((frac * pts).toFixed(2));
+      const ok = normalizeAnswer(score) === normalizeAnswer(pts);
+      return { isCorrect: ok, score };
+    }
+  }
+}
