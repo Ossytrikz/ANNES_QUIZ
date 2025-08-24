@@ -19,12 +19,8 @@
   .hover\:bg-navy:hover { background-color: rgba(var(--color-navy), 0.9); }
   
   .bg-pink { background-color: rgb(var(--color-pink)); }
-  .text-pink { 
-    color: rgb(var(--color-pink));
-    .dark & {
-      color: rgb(var(--color-pink-dark));
-    }
-  }
+  .text-pink { color: rgb(var(--color-pink)); }
+.dark .text-pink { color: rgb(var(--color-pink-dark)); }
   .border-pink { border-color: rgb(var(--color-pink)); }
   .hover\:bg-pink:hover { background-color: rgba(var(--color-pink), 0.9); }
 
