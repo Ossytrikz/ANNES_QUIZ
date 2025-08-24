@@ -69,7 +69,7 @@ export function CollaboratorManager({ quizId, isOwner }: CollaboratorManagerProp
     }
   };
 
-  if (isLoading) return <div className="p-4">Loading collaborators...</div>;
+  if (isLoading) return <div className="container py-4">Loading collaborators...</div>;
   if (error) return <div className="text-red-500 p-4">Error loading collaborators</div>;
 
   return (

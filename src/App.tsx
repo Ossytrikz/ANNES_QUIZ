@@ -1,4 +1,3 @@
-import QuizBuilder from './pages/QuizBuilder';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -94,7 +93,6 @@ const AppContent = () => {
             
         <Route path="/console" element={<QuizConsole/>} />
         <Route path="/quizzes/combined/take" element={<CombinedTakePage/>} />
-        <Route path="/builder" element={<QuizBuilder />} />
       </Routes>
           </ErrorBoundary>
         </main>

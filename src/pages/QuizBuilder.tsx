@@ -104,7 +104,7 @@ function QuestionPalette({ onAdd }: { onAdd: (q: BuilderQuestion)=>void }) {
   return (
     <div className="mb-5">
       <div className="text-sm font-medium mb-2">Add question</div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <PaletteButton label="Multiple choice (single)" onClick={()=>onAdd({ id: newId(), type:'mc_single', stem:'', options:[{id:'A',text:'Option A'},{id:'B',text:'Option B'}], correctId:'A', points:1 })} />
         <PaletteButton label="Multiple choice (multiple)" onClick={()=>onAdd({ id: newId(), type:'mc_multi', stem:'', options:[{id:'A',text:'Option A'},{id:'B',text:'Option B'}], correctIds:['A'], points:1 })} />
         <PaletteButton label="True/False" onClick={()=>onAdd({ id: newId(), type:'true_false', stem:'', correct:true, points:1 })} />

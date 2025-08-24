@@ -135,7 +135,7 @@ export default function QuizConsole() {
         <div className="mx-auto max-w-5xl px-4">
           <div className="rounded-lg border bg-white dark:bg-gray-900 shadow flex items-center justify-between p-3">
             <div className="text-sm text-gray-600">Selected: {countSelected}</div>
-            <div className="flex items-center gap-2"><a href="/builder" className="px-3 py-2 border rounded">Create Quiz</a>
+            <div className="flex items-center gap-2">
               <button onClick={clearAll} className="px-3 py-2 border rounded">Clear</button>
               <button onClick={startCombined} className="px-3 py-2 bg-blue-600 text-white rounded">Start ({countSelected})</button>
             </div>

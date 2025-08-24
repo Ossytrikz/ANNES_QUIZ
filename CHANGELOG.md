@@ -18,9 +18,3 @@
 
 - **Console review UI:** Fixed `renderCorrect` for mc_single/mc_multi to use alt keys and show labels; ordering now displays labels instead of ids.
 - **Grader tweak:** mc_single also compares option labels when ids differ.
-
-- **New:** Professional Quiz Builder (/builder) with support for MC single/multi, True/False, Short text, Ordering, Matching. Saves to Supabase and flows to Console for taking.
-
-- **Routing fix:** Replaced links to `/quizzes/create` with `/quizzes/new` to match router. This resolves in-app 404s when starting a new quiz (Home & Explore pages).
-
-- **Build fix:** Removed duplicate `import QuizBuilder` lines from `src/App.tsx` to fix Vite/Babel 'Identifier already declared' error.

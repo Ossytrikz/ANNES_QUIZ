@@ -89,7 +89,7 @@ export default function ExplorePage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Your Quizzes</h2>
-          {uid ? <Link className="text-blue-600 underline" to="/quizzes/new">Create a quiz</Link> : null}
+          {uid ? <Link className="text-blue-600 underline" to="/quizzes/create">Create a quiz</Link> : null}
         </div>
         {loading ? (
           <div>Loading...</div>
@@ -97,10 +97,10 @@ export default function ExplorePage() {
           <div className="text-sm text-gray-600">Sign in to see your quizzes.</div>
         ) : myQuizzes.length === 0 ? (
           <div className="text-sm text-gray-600">
-            You have no quizzes yet. <Link to="/quizzes/new" className="text-blue-600 underline">Create your first quiz</Link>.
+            You have no quizzes yet. <Link to="/quizzes/create" className="text-blue-600 underline">Create your first quiz</Link>.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {myQuizzes.map(q => <QuizCard key={q.id} quiz={q} />)}
           </div>
         )}
@@ -115,7 +115,7 @@ export default function ExplorePage() {
         ) : publicQuizzes.length === 0 ? (
           <div className="text-sm text-gray-600">No public quizzes yet.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {publicQuizzes.map(q => <QuizCard key={q.id} quiz={q} />)}
           </div>
         )}

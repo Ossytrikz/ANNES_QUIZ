@@ -255,7 +255,7 @@ export default function QuizEditorPage() {
       ) : !quiz ? (
         <div>Quiz not found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="md:col-span-2">
             <div className="bg-white dark:bg-gray-800 border rounded p-3">
               <div className="flex items-center justify-between mb-2">
