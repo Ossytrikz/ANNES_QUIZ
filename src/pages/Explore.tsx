@@ -100,7 +100,7 @@ export default function ExplorePage() {
             You have no quizzes yet. <Link to="/quizzes/create" className="text-blue-600 underline">Create your first quiz</Link>.
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {myQuizzes.map(q => <QuizCard key={q.id} quiz={q} />)}
           </div>
         )}
@@ -115,7 +115,7 @@ export default function ExplorePage() {
         ) : publicQuizzes.length === 0 ? (
           <div className="text-sm text-gray-600">No public quizzes yet.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {publicQuizzes.map(q => <QuizCard key={q.id} quiz={q} />)}
           </div>
         )}

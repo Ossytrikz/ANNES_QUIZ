@@ -1,43 +1,5 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
-import grading from '../../lib/grading';
-import { getQuizSettings } from '../../lib/settings';
+import React, { useCallback, useMemo } from 'react';
 
-// === Helpers to extract correct answers for feedback (lightweight mirror of grader logic)
-function getOptions(meta: any): any[] {
-  if (!meta) return [];
-  if (Array.isArray(meta.options)) return meta.options;
-  if (Array.isArray(meta.items)) return meta.items;
-  if (Array.isArray(meta.choices)) return meta.choices;
-  return [];
-}
-function idOf(o: any): string {
-  if (o == null) return "";
-  const t = typeof o;
-  if (t === "string" || t === "number" || t === "boolean") return String(o);
-  return String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? "");
-}
-function deriveCorrectId(meta: any): string | null {
-  const opts = getOptions(meta);
-  if (meta?.correctId) return String(meta.correctId);
-  if (meta?.correctid) return String(meta.correctid);
-  if (typeof meta?.correct === "number") {
-    const idx = meta.correct;
-    if (idx >= 0 && idx < opts.length) return idOf(opts[idx]);
-  }
-  const flagged = opts.find((o:any)=> !!o?.correct || !!o?.isCorrect);
-  if (flagged) return idOf(flagged);
-  if (Array.isArray(meta?.correctAnswers) && meta.correctAnswers.length) return String(meta.correctAnswers[0]);
-  return null;
-}
-function deriveCorrectIdsOrdering(meta: any): string[] {
-  const items = Array.isArray(meta?.items) ? meta.items : [];
-  if (Array.isArray(meta?.correctIds) && meta.correctIds.length) return meta.correctIds.map(String);
-  const raw = Array.isArray(meta?.correct) ? meta.correct : [];
-  if (raw.length && raw.every((x:any)=>Number.isInteger(Number(x))) && items.length) {
-    return raw.map((n:any)=> idOf(items[Number(n)])).filter(Boolean);
-  }
-  return raw.map(String);
-}
 export type TakeQuestionProps = {
   question: { id: string; type: string; stem: string; meta: any };
   value: any;
@@ -119,17 +81,7 @@ const MCSingle = React.memo(function MCSingle({
   meta: any;
   value: string | undefined; // option id
   onChange: (choiceId: string) => void;
-}) {const { immediateFeedback } = getQuizSettings();
-const [feedback, setFeedback] = useState<{show:boolean; isCorrect:boolean; correctText?:string}|null>(null);
-useEffect(()=>{ setFeedback(null); }, [qid]);
-
-const correctId = deriveCorrectId(meta);
-const correctText = (()=>{
-  const opts = getOptions(meta);
-  const o = opts.find((x:any)=> idOf(x) === String(correctId));
-  return o?.text ?? o?.label ?? o?.name ?? o?.title ?? String(correctId ?? "");
-})();
-
+}) {
   const name = `mc-${qid}`;
   const options = useMemo(() => {
     const opts = Array.isArray(meta?.options) ? meta.options : [];
@@ -156,12 +108,7 @@ const correctText = (()=>{
           </label>
         );
       })}
-    {feedback?.show && (
-  <div className={feedback.isCorrect ? "text-green-600 mt-2" : "text-red-600 mt-2"}>
-    {feedback.isCorrect ? "Correct ✅" : "Incorrect ❌"} — Correct answer: <strong>{correctText}</strong>
-  </div>
-)}
-</div>
+    </div>
   );
 });
 
@@ -203,22 +150,14 @@ const MCMulti = React.memo(function MCMulti({
 });
 
 const Ordering = React.memo(function Ordering({
-  qid,
   items,
-  meta,
   value,
   onChange,
 }: {
-  qid: string;
   items: Array<{ id: string; text: string }>;
-  meta: any;
   value: string[] | undefined;
   onChange: (order: string[]) => void;
-}) {const { immediateFeedback } = getQuizSettings();
-const [feedback, setFeedback] = useState<{show:boolean; isCorrect:boolean}|null>(null);
-useEffect(()=>{ setFeedback(null); }, [items]);
-const correctIds = deriveCorrectIdsOrdering({ items }); // we only know items here; meta used at call site
-
+}) {
   const initial = useMemo(() => items.map((i) => i.id), [items]);
   const order = Array.isArray(value) && value.length === items.length ? value : initial;
 
@@ -230,27 +169,22 @@ const correctIds = deriveCorrectIdsOrdering({ items }); // we only know items he
       const arr = [...order];
       [arr[idx], arr[j]] = [arr[j], arr[idx]];
       onChange(arr);
-      if (immediateFeedback) {
-        const res = grading.grade({ id: qid, type: 'ordering', meta }, { order: arr });
-        setFeedback({ show: true, isCorrect: !!res.isCorrect });
-      }
     },
-    [onChange, order, immediateFeedback, meta]
+    [onChange, order]
   );
 
   return (
-    <div className="space-y-2">
-      <ul className="space-y-2">
+    <ul className="space-y-2">
       {order.map((id) => {
         const item = items.find((i) => i.id === id);
         return (
-          <li key={id} className="border rounded px-3 py-2 flex items-center justify-between gap-3 text-sm sm:text-base">
+          <li key={id} className="border rounded px-3 py-2 flex items-center justify-between">
             <span>{item?.text ?? id}</span>
             <div className="flex gap-2">
-              <button type="button" className="px-2 py-1 border rounded text-xs sm:text-sm" onClick={move(id, -1)} aria-label="Move up">
+              <button type="button" className="px-2 py-1 border rounded" onClick={move(id, -1)} aria-label="Move up">
                 ↑
               </button>
-              <button type="button" className="px-2 py-1 border rounded text-xs sm:text-sm" onClick={move(id, 1)} aria-label="Move down">
+              <button type="button" className="px-2 py-1 border rounded" onClick={move(id, 1)} aria-label="Move down">
                 ↓
               </button>
             </div>
@@ -258,12 +192,6 @@ const correctIds = deriveCorrectIdsOrdering({ items }); // we only know items he
         );
       })}
     </ul>
-      {feedback?.show && (
-        <div className={feedback.isCorrect ? "text-green-600" : "text-red-600"}>
-          {feedback.isCorrect ? "Correct ✅" : "Incorrect ❌"} — Correct order shown above.
-        </div>
-      )}
-    </div>
   );
 });
 
@@ -342,9 +270,7 @@ export default function TakeQuestion({ question, value, onChange }: TakeQuestion
       const items = Array.isArray(question.meta?.items) ? question.meta.items : [];
       return (
         <Ordering
-          qid={question.id}
           items={items}
-          meta={question.meta}
           value={Array.isArray(value?.order) ? (value.order as string[]) : undefined}
           onChange={(order) => onChange({ order })}
         />

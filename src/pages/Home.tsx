@@ -153,7 +153,7 @@ export default function Home() {
 
       {uid ? (
         <section className="max-w-6xl mx-auto px-4">
-          <div className="grid sm:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-3 gap-3">
             <ActionCard
               title="New quiz"
               desc="Start from a blank template or import items."
@@ -289,7 +289,7 @@ function SectionHeader({ title, cta }: { title: string; cta?: { label: string; t
 
 function SkeletonGrid({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
@@ -332,7 +332,7 @@ function EmptyState({
 
 function QuizGrid({ quizzes }: { quizzes: QuizRow[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {quizzes.map((q) => (
         <QuizCard key={q.id} quiz={q} />
       ))}

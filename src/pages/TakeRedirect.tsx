@@ -12,5 +12,5 @@ export default function TakeRedirect() {
       navigate('/console', { replace: true });
     }
   }, [id, navigate]);
-  return <div className="container py-4">Redirecting to Quiz Console…</div>;
+  return <div className="p-4">Redirecting to Quiz Console…</div>;
 }

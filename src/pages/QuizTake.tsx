@@ -5,7 +5,7 @@ import type { Quiz } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import TakeQuestion from '../components/questions/TakeQuestion';
-import grading from '../lib/grading';
+import { grade, type QuestionRecord } from '../lib/grading';
 
 /** Shuffle helper */
 function shuffle<T>(arr: T[]): T[] {
@@ -127,7 +127,7 @@ export default function QuizTakePage() {
     // 2) Grade locally and persist answer rows
     const rows = questions.map((q) => {
       const response = answers[q.id] ?? null;
-      const result = grading.grade(q, response); // { isCorrect, score }
+      const result = grade(q, response); // { isCorrect, score }
       return {
         attempt_id: att.id,
         question_id: q.id,

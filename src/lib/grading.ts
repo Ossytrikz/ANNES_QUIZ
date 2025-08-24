@@ -63,12 +63,8 @@ function normStr(x: any): string {
 }
 
 function idOf(o: any): string {
-  if (o == null) return "";
-  const t = typeof o;
-  if (t === "string" || t === "number" || t === "boolean") return String(o);
   return String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? "");
 }
-  
 
 /** Gather candidate options (supports meta.options / meta.items / meta.choices) */
 function getOptions(meta: any): any[] {
@@ -322,14 +318,7 @@ function checkOrdering(meta: any, response: any): { isCorrect: boolean; score: n
   const givenIds = readOrdering(response);
   log("ord", "compare", { givenIds, correctIds });
 
-  
-  // Fallback: if user didn't move anything, treat current items order as the response
-  if ((!givenIds || givenIds.length === 0) && Array.isArray(items) && items.length > 0) {
-    const initial = items.map((it: any) => idOf(it));
-    givenIds = initial;
-    log("ord", "fallback to initial order", { givenIds });
-  }
-const allowReverse = !!meta?.allowReverse;
+  const allowReverse = !!meta?.allowReverse;
   const ignoreMissing = !!meta?.ignoreMissing;
 
   if (!correctIds.length || !givenIds.length) {
@@ -427,7 +416,8 @@ function checkOpen(meta: any): { isCorrect: null; score: 0; possible: number } {
 }
 
 /* ============ Public API ============ */
-function gradeQuestion(
+
+export function gradeQuestion(
   question: QuestionRecord,
   response: any
 ): GradeDetail {
@@ -482,15 +472,16 @@ function gradeQuestion(
     return { id: question.id, type, isCorrect: null, score: 0, possible: toNum(meta?.points ?? 1, 1) };
   }
 }
-function grade(
+
+export function grade(
   question: QuestionRecord,
   response: any
 ): { isCorrect: boolean | null; score: number };
-function grade(
+export function grade(
   questions: QuestionRecord[],
   responses: Record<string, any>
 ): { totalPossible: number; totalScore: number; details: GradeDetail[] };
-function grade(arg1: any, arg2?: any): any {
+export function grade(arg1: any, arg2?: any): any {
   if (Array.isArray(arg1)) {
     const questions: QuestionRecord[] = arg1;
     const responses: Record<string, any> = arg2 ?? {};
@@ -505,8 +496,3 @@ function grade(arg1: any, arg2?: any): any {
     return { isCorrect: d.isCorrect, score: d.score };
   }
 }
-
-
-// Default export for environments that dislike top-level named exports
-const api = { grade, gradeQuestion };
-export default api;

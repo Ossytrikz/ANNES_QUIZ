@@ -281,7 +281,7 @@ function AddModal({
           <button onClick={onClose} className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">✕</button>
         </div>
 
-        <div className="container py-4">
+        <div className="p-4">
           {step === 'pick' && (
             <div className="grid sm:grid-cols-2 gap-3">
               {TYPE_CARDS.map((c) => (

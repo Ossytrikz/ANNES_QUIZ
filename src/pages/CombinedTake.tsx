@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import type { Quiz } from '../types/database';
 import TakeQuestion from '../components/questions/TakeQuestion';
-import grading from '../lib/grading';
+import { grade, type QuestionRecord } from '../lib/grading';
 import toast from 'react-hot-toast';
 
 // ==== Debug Logger ====
@@ -361,7 +361,7 @@ export default function CombinedTakePage() {
     for (const q of filtered) {
       const pts = Number(q.points ?? 1);
       const resp = answers[q.id] ?? null;
-      const res = grading.grade(q, resp);
+      const res = grade(q, resp);
       const ok = res.isCorrect;
       const earned = ok ? pts : 0;
 

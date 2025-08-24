@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, User, Settings, LogOut, Plus, Bell, HelpCircle } from 'lucide-react';
+import { Menu, X, User, Settings, LogOut, Plus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import ThemeToggle from '../theme/ThemeToggle';
 
@@ -68,7 +68,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile drawer for non-auth actions */}
       {!user && isMenuOpen && (
         <div className="sm:hidden border-t">
           <nav className="container py-2 grid gap-2">
