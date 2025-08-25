@@ -1,4 +1,5 @@
 {
+
   "version": 2,
   "builds": [
     {
@@ -20,3 +21,4 @@
       "dest": "/index.html"
     }
 }
+
