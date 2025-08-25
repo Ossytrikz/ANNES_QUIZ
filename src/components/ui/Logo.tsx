@@ -7,3 +7,4 @@ export function LogoWithLink() {
   </Link>);
 }
 export default LogoWithLink;
+export { LogoWithLink as Logo };
