@@ -63,6 +63,9 @@ function normStr(x: any): string {
 }
 
 function idOf(o: any): string {
+  if (o === undefined || o === null) return "";
+  const t = typeof o;
+  if (t === "string" || t === "number" || t === "boolean") return String(o);
   return String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? "");
 }
 
@@ -136,7 +139,12 @@ function readSingleChoice(response: any): string {
   if (typeof response === "string" || typeof response === "number") return String(response);
   if (typeof response === "boolean") return String(response);
   if (typeof response === "object") {
-    if ("choice" in response) return idOf((response as any).choice);
+    if ("choice" in response) {
+      const choiceVal = (response as any).choice;
+      return (typeof choiceVal === "string" || typeof choiceVal === "number" || typeof choiceVal === "boolean")
+        ? String(choiceVal)
+        : idOf(choiceVal);
+    }
     if ("id" in response || "value" in response || "key" in response || "text" in response) return idOf(response);
   }
   return String(response);
@@ -187,7 +195,18 @@ function checkMCSingle(meta: any, response: any): { isCorrect: boolean; score: n
   const options = getOptions(meta);
   const { byId, byLabel } = labelMap(options);
 
-  const givenId = readSingleChoice(response);
+  // Read the candidate answer. `readSingleChoice` may return the index of the chosen
+  // option as a numeric string (e.g. "0", "1", ...). In that case, map it to
+  // the option's id so that ID equality checks work correctly. Otherwise
+  // preserve the original identifier.
+  let givenId: any = readSingleChoice(response);
+  if (typeof givenId === "string" && /^\d+$/.test(givenId)) {
+    const mappedGiven = indexToOptionId(meta, Number(givenId));
+    if (mappedGiven) {
+      log("mc1", "mapped numeric given → id", { idx: Number(givenId), id: mappedGiven });
+      givenId = mappedGiven;
+    }
+  }
   const givenLabel = byId.get(String(givenId)) ?? "";
 
   let correctRaw: any =

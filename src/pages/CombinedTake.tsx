@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -125,6 +125,66 @@ export default function CombinedTakePage() {
             open_question: 'open',
           } as const;
           const type = (map[row.type] ?? row.type) as QuestionRecord['type'];
+  const reportRef = useRef<HTMLDivElement | null>(null);
+
+  function handleExportCsv() {
+    try {
+      const rows = resultDetails.map((d, idx) => ({
+        index: idx + 1,
+        type: d.type,
+        question: d.stem,
+        correct: d.ok === null ? 'Ungraded' : (d.ok ? 'Yes' : 'No'),
+        score: d.score,
+        maxScore: d.pts,
+        your: Array.isArray(d.your) ? d.your.join('; ') : (typeof d.your === 'string' ? d.your : JSON.stringify(d.your)),
+        correctAns: Array.isArray(d.correct) ? d.correct.join('; ') : (typeof d.correct === 'string' ? d.correct : JSON.stringify(d.correct)),
+      }));
+      const headKeys = Object.keys(rows[0] || {index:1,type:'',question:'',correct:'',score:0,maxScore:0,your:'',correctAns:''});
+      const head = headKeys.join(',');
+      const body = rows.map(r => headKeys.map(k => `"${String((r as any)[k]).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([head + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'combined_quiz_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to export CSV');
+    }
+  }
+
+  async function handleDownloadPdf() {
+    const { buildResultsSummaryPdf } = await import('../utils/pdf');
+    const totalPts = questions.reduce((a,q)=>a+Number((q as any).points||0),0);
+    await buildResultsSummaryPdf({
+      quizTitle: 'Combined Quiz',
+      result: result || { score: 0, total: totalPts },
+      resultDetails: resultDetails as any,
+      meta: { date: new Date().toLocaleString() }
+    }, 'combined_quiz_summary.pdf');
+  }
+
+  function handleRetakeWrongOnly() {
+    const wrongIds = resultDetails.filter(d => d.ok === false).map(d => d.id);
+    if (!wrongIds.length) {
+      alert('No wrong answers to retake');
+      return;
+    }
+    const filtered = questions.filter(q => wrongIds.includes((q as any).id));
+    if (!filtered.length) {
+      alert('Could not filter questions');
+      return;
+    }
+    setDone(false);
+    setResult(null);
+    setResultDetails([]);
+    setIdx(0);
+    setAnswers({});
+    setQuestions(filtered as any);
+  }
+
 
           let meta: any = {};
           try {
@@ -470,10 +530,16 @@ export default function CombinedTakePage() {
           </div>
         </>
       ) : (
-        <div className="border rounded-lg p-4 space-y-4">
+        <div ref={reportRef} className="border rounded-lg p-4 space-y-4">
           <div className="text-lg font-semibold">Results</div>
           <div>
             Score: <b>{result?.score}</b> / <b>{result?.total}</b>
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button onClick={handleExportCsv} className="px-3 py-1 rounded border">Export CSV</button>
+            <button onClick={()=>window.print()} className="px-3 py-1 rounded border">Print</button>
+            <button onClick={handleDownloadPdf} className="px-3 py-1 rounded border">Download PDF</button>
           </div>
 
           <div className="space-y-4">
@@ -539,6 +605,7 @@ export default function CombinedTakePage() {
             >
               Take Again
             </button>
+            <button className="px-4 py-2 rounded bg-pink-600 text-white" onClick={handleRetakeWrongOnly}>Retake Wrong Only</button>
           </div>
         </div>
       )}
