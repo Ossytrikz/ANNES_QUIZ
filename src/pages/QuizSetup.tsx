@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card.tsx';
-import { Input } from '@/components/ui/input.tsx';
 import { Label } from '@/components/ui/label.tsx';
 import { Textarea } from '@/components/ui/textarea.tsx';
 
@@ -69,12 +68,13 @@ export default function QuizSetupPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
-                <Input
+                <input
                   id="title"
                   placeholder="Enter quiz title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
+                  className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
