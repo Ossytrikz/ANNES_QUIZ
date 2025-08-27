@@ -16,7 +16,6 @@ export function supabase() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'annes_quiz.auth.v1',
     },
   })
   return _client

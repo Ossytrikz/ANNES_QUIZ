@@ -9,6 +9,10 @@ type Props = {
   emptyLabel?: string;
   rowHeight?: number; // px
   overscan?: number;
+  onArchive?: (id: string) => void | Promise<void>;
+  onUnarchive?: (id: string) => void | Promise<void>;
+  onMove?: (id: string, folder: string | null) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
 };
 
 export const VirtualizedQuizList: React.FC<Props> = ({
@@ -18,6 +22,10 @@ export const VirtualizedQuizList: React.FC<Props> = ({
   emptyLabel = 'No items found.',
   rowHeight = 68,
   overscan = 6,
+  onArchive,
+  onUnarchive,
+  onMove,
+  onDelete,
 }) => {
   const parentRef = useRef<HTMLDivElement | null>(null);
   const [viewportH, setViewportH] = useState<number>(420);
@@ -77,10 +85,42 @@ export const VirtualizedQuizList: React.FC<Props> = ({
                     checked={!!selected[q.id]}
                     onChange={e => onToggle(q.id, e.target.checked)}
                   />
-                  <div>
-                    <div className="font-medium">{q.title}</div>
-                    {q.description && <div className="text-xs text-gray-500">{q.description}</div>}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{q.title}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {q.description || 'No description'}
+                    </div>
+                    {(q as any).folder && (
+                      <div className="text-[10px] text-gray-400">Folder: {(q as any).folder}</div>
+                    )}
                   </div>
+                  {(onArchive || onUnarchive || onMove || onDelete) && (
+                    <div className="shrink-0 flex items-center gap-2">
+                      {onMove && (
+                        <button
+                          className="text-xs px-2 py-1 border rounded"
+                          onClick={() => {
+                            const folder = prompt('Move to folder (leave empty to clear):', (q as any).folder || '')
+                            if (folder !== null) onMove(q.id, folder.trim() === '' ? null : folder)
+                          }}
+                        >Move</button>
+                      )}
+                      {onArchive && !((q as any).archived) && (
+                        <button className="text-xs px-2 py-1 border rounded" onClick={() => onArchive(q.id)}>Archive</button>
+                      )}
+                      {onUnarchive && ((q as any).archived) && (
+                        <button className="text-xs px-2 py-1 border rounded" onClick={() => onUnarchive(q.id)}>Unarchive</button>
+                      )}
+                      {onDelete && (
+                        <button
+                          className="text-xs px-2 py-1 border rounded text-red-600"
+                          onClick={() => {
+                            if (confirm('Delete this quiz? This cannot be undone.')) onDelete(q.id)
+                          }}
+                        >Delete</button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

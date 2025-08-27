@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listPublicQuizzes, listOwnedQuizzes, listCollabQuizzes } from '../lib/quizLists';
 import type { Quiz } from '../types/database';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../context/AuthProvider';
 import { useDebounce } from '../hooks/useDebounce';
 import { VirtualizedQuizList } from '../components/VirtualizedQuizList';
+import { archiveQuiz, unarchiveQuiz, moveQuizToFolder, deleteQuiz } from '../lib/quizzes';
 
 export default function QuizConsole() {
   const { user } = useAuth();
@@ -16,6 +17,8 @@ export default function QuizConsole() {
   const [q, setQ] = useState('');
   const qDebounced = useDebounce(q, 250);
   const uid = user?.id ?? null;
+  const [showArchived, setShowArchived] = useState(false);
+  const [folderFilter, setFolderFilter] = useState<string>('');
 
   // Prefetch personal libraries right after sign-in
   useEffect(() => {
@@ -24,7 +27,7 @@ export default function QuizConsole() {
     qc.prefetchQuery({ queryKey: ['quizzes','collab', uid], queryFn: () => listCollabQuizzes(uid), staleTime: 5 * 60_000 });
   }, [uid, qc]);
 
-  const { data: mine = [], isLoading: loadingMine } = useQuery({
+  const { data: mine = [] } = useQuery({
     queryKey: ['quizzes','mine', uid],
     queryFn: () => listOwnedQuizzes(uid),
     enabled: !!uid,
@@ -32,7 +35,7 @@ export default function QuizConsole() {
     gcTime: 30 * 60_000,
   });
 
-  const { data: collab = [], isLoading: loadingCollab } = useQuery({
+  const { data: collab = [] } = useQuery({
     queryKey: ['quizzes','collab', uid],
     queryFn: () => listCollabQuizzes(uid),
     enabled: !!uid,
@@ -40,7 +43,7 @@ export default function QuizConsole() {
     gcTime: 30 * 60_000,
   });
 
-  const { data: pub = [], isLoading: loadingPub } = useQuery({
+  const { data: pub = [] } = useQuery({
     queryKey: ['quizzes','public', qDebounced],
     queryFn: () => listPublicQuizzes(qDebounced),
     staleTime: 2 * 60_000,
@@ -48,6 +51,14 @@ export default function QuizConsole() {
   });
 
   const myQuizzes = useMemo(() => [...mine, ...collab], [mine, collab]);
+
+  const myFiltered = useMemo(() => {
+    return myQuizzes.filter((x: any) => {
+      if (!showArchived && x.archived) return false;
+      if (folderFilter && (x.folder || '') !== folderFilter) return false;
+      return true;
+    });
+  }, [myQuizzes, showArchived, folderFilter]);
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const countSelected = useMemo(() => Object.values(selected).filter(Boolean).length, [selected]);
@@ -60,6 +71,23 @@ export default function QuizConsole() {
     if (!ids.length) return;
     const fb = feedback ? '1' : '0';
     navigate(`/quizzes/combined/take?ids=${ids.join(',')}&feedback=${fb}`);
+  }
+
+  async function handleArchive(id: string) {
+    await archiveQuiz(id);
+    qc.invalidateQueries({ queryKey: ['quizzes'] });
+  }
+  async function handleUnarchive(id: string) {
+    await unarchiveQuiz(id);
+    qc.invalidateQueries({ queryKey: ['quizzes'] });
+  }
+  async function handleMove(id: string, folder: string | null) {
+    await moveQuizToFolder(id, folder);
+    qc.invalidateQueries({ queryKey: ['quizzes'] });
+  }
+  async function handleDelete(id: string) {
+    await deleteQuiz(id);
+    qc.invalidateQueries({ queryKey: ['quizzes'] });
   }
 
   const env = (import.meta as any).env as Record<string,string>;
@@ -100,6 +128,20 @@ export default function QuizConsole() {
             <input type="checkbox" checked={feedback} onChange={e=>setFeedback(e.target.checked)} />
             Immediate feedback (green/red on selection)
           </label>
+
+          <div className="mt-3 flex flex-wrap gap-3 items-center text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={showArchived} onChange={e=>setShowArchived(e.target.checked)} />
+              Show archived
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Folder:</span>
+              <input value={folderFilter} onChange={e=>setFolderFilter(e.target.value)} placeholder="e.g. Algebra" className="px-2 py-1 border rounded" />
+              {folderFilter && (
+                <button className="px-2 py-1 border rounded" onClick={()=>setFolderFilter('')}>Clear Folder</button>
+              )}
+            </div>
+          </div>
         </header>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -109,10 +151,14 @@ export default function QuizConsole() {
               <button onClick={() => selectAll(myQuizzes)} className="text-sm underline">Select all</button>
             </div>
             <VirtualizedQuizList
-              items={myQuizzes}
+              items={myFiltered}
               selected={selected}
               onToggle={toggle}
               emptyLabel={user ? 'No quizzes yet.' : 'Sign in to see your quizzes and collaborations.'}
+              onArchive={handleArchive}
+              onUnarchive={handleUnarchive}
+              onMove={handleMove}
+              onDelete={handleDelete}
             />
           </section>
 

@@ -1,6 +1,5 @@
-import React from 'react';
 import { Github, Twitter, Mail } from 'lucide-react';
-import { Logo } from '../ui/Logo';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
   return (
@@ -10,7 +9,10 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="mb-4">
-              <Logo size="md" />
+              <Link to="/" className="inline-flex items-center gap-2 font-semibold">
+                <img src="/Annes Quiz.png" alt="Anne's Quiz" className="h-6 w-6 rounded object-contain" />
+                <span>Anne&apos;s Quiz</span>
+              </Link>
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
               The collaborative quiz platform for effective learning and revision. 
@@ -98,9 +100,24 @@ export function Footer() {
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
-          <p className="text-center text-gray-500 dark:text-gray-400">
-            © 2025 Anne's Quiz. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center text-gray-500 dark:text-gray-400">
+              © 2025 Anne's Quiz. All rights reserved.
+            </p>
+            <a
+              href="/secret.html"
+              className="group inline-flex items-center justify-center p-2 rounded-full border border-rose-300/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+              title="Open the secret page"
+              aria-label="Open the secret page"
+            >
+              <span
+                className="text-base transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:rotate-6 group-hover:scale-110"
+                aria-hidden="true"
+              >
+                🐰🥚
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </footer>

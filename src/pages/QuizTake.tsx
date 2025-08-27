@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Quiz } from '../types/database';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import TakeQuestion from '../components/questions/TakeQuestion';
@@ -21,6 +20,7 @@ function normalizeType(row: any): QuestionRecord {
     multiple_choice_single: 'mc_single',
     multiple_choice_multiple: 'mc_multi',
     open_question: 'open',
+    short_answer: 'short_text',
   } as const;
   const type = (map[row.type] ?? row.type) as QuestionRecord['type'];
 
@@ -43,10 +43,8 @@ function normalizeType(row: any): QuestionRecord {
 
 export default function QuizTakePage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionRecord[]>([]);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [idx, setIdx] = useState(0);
@@ -62,7 +60,6 @@ export default function QuizTakePage() {
         toast.error('Failed to load quiz');
         return;
       }
-      setQuiz(qz as any);
 
       // Load questions (only existing columns)
       const { data: qs, error: e2 } = await supabase
@@ -91,14 +88,7 @@ export default function QuizTakePage() {
     setAnswers((prev) => ({ ...prev, [qid]: value }));
   };
 
-  const current = questions[idx];
   const total = questions.length;
-
-  const canPrev = idx > 0;
-  const canNext = idx < total - 1;
-
-  const next = () => canNext && setIdx((i) => i + 1);
-  const prev = () => canPrev && setIdx((i) => i - 1);
 
   const onSubmit = async () => {
     if (!user || !id) {
@@ -124,7 +114,7 @@ export default function QuizTakePage() {
       return;
     }
 
-    // 2) Grade locally and persist answer rows
+    // 2) Grade locally and persist answer rows (new columns: is_correct, score_awarded)
     const rows = questions.map((q) => {
       const response = answers[q.id] ?? null;
       const result = grade(q, response); // { isCorrect, score }
@@ -133,10 +123,74 @@ export default function QuizTakePage() {
         question_id: q.id,
         response: response ?? {},
         is_correct: result.isCorrect,
-        score: result.score,
-        possible: Number(q.points ?? 1),
+        score_awarded: result.score,
         created_at: new Date().toISOString(),
       };
     });
 
-    const { error: e2 } = await supabase.from('attempt_answers').insert(ro_
+    const { error: e2 } = await supabase.from('attempt_answers').insert(rows as any);
+    if (e2) {
+      setSubmitting(false);
+      toast.error('Failed to save answers');
+      return;
+    }
+
+    // 3) Update attempt totals
+    const totalScore = rows.reduce((s, r) => s + Number((r as any).score_awarded ?? 0), 0);
+    await supabase
+      .from('attempts')
+      .update({ status: 'submitted', submitted_at: new Date().toISOString(), score_total: totalScore })
+      .eq('id', att.id);
+
+    setSubmitting(false);
+    toast.success('Attempt submitted');
+  };
+
+  const current = questions[idx];
+  const canPrev = idx > 0;
+  const canNext = idx < Math.max(0, total - 1);
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">Question {total ? idx + 1 : 0} / {total}</div>
+        <div className="flex gap-2">
+          <button
+            className="px-3 py-1 rounded border"
+            onClick={() => canPrev && setIdx((i) => i - 1)}
+            disabled={!canPrev}
+          >
+            Previous
+          </button>
+          <button
+            className="px-3 py-1 rounded border"
+            onClick={() => canNext && setIdx((i) => i + 1)}
+            disabled={!canNext}
+          >
+            Next
+          </button>
+          <button
+            className="px-3 py-1 rounded bg-pink-600 text-white disabled:opacity-60"
+            onClick={onSubmit}
+            disabled={submitting || !total}
+          >
+            {submitting ? 'Submitting…' : 'Submit'}
+          </button>
+        </div>
+      </div>
+
+      {current ? (
+        <div className="space-y-3">
+          <div className="text-lg font-medium">{current.stem}</div>
+          <TakeQuestion
+            question={current as any}
+            value={answers[current.id]}
+            onChange={(v) => onChangeAnswer(current.id, v)}
+          />
+        </div>
+      ) : (
+        <div className="text-sm text-gray-600">Loading questions…</div>
+      )}
+    </div>
+  );
+}

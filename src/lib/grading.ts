@@ -209,7 +209,9 @@ function checkMCSingle(meta: any, response: any): { isCorrect: boolean; score: n
   }
   const givenLabel = byId.get(String(givenId)) ?? "";
 
+  // Preferred: correctAnswers[0]
   let correctRaw: any =
+    (Array.isArray(meta?.correctAnswers) && meta.correctAnswers.length > 0 ? meta.correctAnswers[0] : undefined) ??
     meta?.correct ??
     meta?.answer ??
     meta?.correctId ??
@@ -291,7 +293,7 @@ function checkMCMulti(meta: any, response: any): { isCorrect: boolean; score: nu
 
   if ((!correctList || correctList.length === 0) && options.length) {
     correctList = options
-      .filter((o: any) => isFlagTrue(o?.correct) || isFlagTrue(o?.isCorrect))
+      .filter((o: any) => isFlagTrue(o?.correct) || isFlagTrue(o?.isCorrect) || isFlagTrue(o?.is_correct))
       .map(idOf);
     log("mcM", "derived correct[] from flags", { correctList });
   }
@@ -314,6 +316,7 @@ function checkMCMulti(meta: any, response: any): { isCorrect: boolean; score: nu
 function checkOrdering(meta: any, response: any): { isCorrect: boolean; score: number; possible: number } {
   const possible = toNum(meta?.points ?? 1, 1);
   const items = Array.isArray(meta?.items) ? meta.items : [];
+  const { byId } = labelMap(items);
 
   let correctRaw: any[] =
     (Array.isArray(meta?.correctOrder) && meta.correctOrder) ||
@@ -345,8 +348,20 @@ function checkOrdering(meta: any, response: any): { isCorrect: boolean; score: n
   }
 
   const sameLen = correctIds.length === givenIds.length;
-  const exactOk =
-    sameLen && correctIds.every((id, i) => normStr(id) === normStr(givenIds[i]));
+  let exactOk = sameLen && correctIds.every((id, i) => normStr(id) === normStr(givenIds[i]));
+  if (!exactOk) {
+    // Fallback: compare by labels if correctIds are actually labels
+    const corrLabels = correctIds.map((c) => {
+      const fromId = byId.get(String(c));
+      return normStr(fromId ?? String(c));
+    });
+    const givenLabels = givenIds.map((g) => {
+      const fromId = byId.get(String(g));
+      return normStr(fromId ?? String(g));
+    });
+    exactOk = sameLen && corrLabels.every((lab, i) => lab === givenLabels[i]);
+    log("ord", "label fallback compare", { corrLabels, givenLabels, exactOk });
+  }
   if (exactOk) return { isCorrect: true, score: possible, possible };
 
   if (allowReverse && sameLen) {
@@ -369,7 +384,7 @@ function checkOrdering(meta: any, response: any): { isCorrect: boolean; score: n
 
 function checkMatching(meta: any, response: any): { isCorrect: boolean; score: number; possible: number } {
   const left = Array.isArray(meta?.left) ? meta.left : [];
-  const correctMap: Record<string, string> = meta?.correctMap ?? meta?.pairs ?? {};
+  const correctMap: Record<string, string> = meta?.correctMap ?? meta?.pairs ?? meta?.correct ?? meta?.answerMap ?? {};
 
   // FIXED: avoid mixing ?? with || without parens
   const possiblePrimary = (meta?.points ?? left.length);
@@ -401,9 +416,13 @@ function checkMatching(meta: any, response: any): { isCorrect: boolean; score: n
 
 function checkShortText(meta: any, response: any): { isCorrect: boolean; score: number; possible: number } {
   const possible = toNum(meta?.points ?? 1, 1);
-  const answers: string[] = Array.isArray(meta?.acceptedAnswers)
+  let answers: string[] = Array.isArray(meta?.acceptedAnswers)
     ? meta.acceptedAnswers.map(String)
     : [];
+  if (!answers.length) {
+    const alt = [meta?.rubric, meta?.correct_text, meta?.answer].filter(hasValue).map(String);
+    answers = alt.length ? alt : [];
+  }
 
   const given =
     typeof response === "string" || typeof response === "number"

@@ -92,7 +92,68 @@ export default function CombinedTakePage() {
     }>
   >([]);
 
+  // === Results actions & PDF ===
+  const reportRef = useRef<HTMLDivElement | null>(null);
+
+  function handleExportCsv() {
+    try {
+      const rows = resultDetails.map((d, idx) => ({
+        index: idx + 1,
+        type: d.type,
+        question: d.stem,
+        correct: d.ok === null ? 'Ungraded' : (d.ok ? 'Yes' : 'No'),
+        score: d.score,
+        maxScore: d.pts,
+        your: Array.isArray(d.your) ? d.your.join('; ') : (typeof d.your === 'string' ? d.your : JSON.stringify(d.your)),
+        correctAns: Array.isArray(d.correct) ? d.correct.join('; ') : (typeof d.correct === 'string' ? d.correct : JSON.stringify(d.correct)),
+      }));
+      const headKeys = Object.keys(rows[0] || {index:1,type:'',question:'',correct:'',score:0,maxScore:0,your:'',correctAns:''});
+      const head = headKeys.join(',');
+      const body = rows.map(r => headKeys.map(k => `"${
+        String((r as any)[k]).replace(/"/g,'""')
+      }"`).join(',')).join('\n');
+      const blob = new Blob([head + '\n' + body], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'combined_quiz_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to export CSV');
+    }
+  }
+
+  async function handleDownloadPdf() {
+    const { buildResultsSummaryPdf } = await import('../utils/pdf');
+    const totalPts = questions.reduce((a,q)=>a+Number((q as any).points||0),0);
+    await buildResultsSummaryPdf({
+      quizTitle: 'Combined Quiz',
+      result: result || { score: 0, total: totalPts },
+      resultDetails: resultDetails as any,
+      meta: { date: new Date().toLocaleString() },
+      logoUrl: '/Annes Quiz.png'
+    }, 'combined_quiz_summary.pdf');
+  }
+
+  function handleRetakeWrongOnly() {
+    const wrongIds = resultDetails.filter(d => d.ok === false).map(d => d.id);
+    if (!wrongIds.length) {
+      alert('No wrong answers to retake');
+      return;
+    }
+    const filtered = questions.filter((q:any) => wrongIds.includes(q.id));
+    setDone(false);
+    setResult(null);
+    setResultDetails([]);
+    setIdx(0);
+    setAnswers({});
+    setQuestions(filtered as any);
+  }
+
   useEffect(() => {
+    try { console.log('[React version]', (React as any).version); } catch {}
     let on = true;
     const load = async () => {
       if (!ids.length) {
@@ -123,68 +184,9 @@ export default function CombinedTakePage() {
             multiple_choice_single: 'mc_single',
             multiple_choice_multiple: 'mc_multi',
             open_question: 'open',
+            short_answer: 'short_text',
           } as const;
           const type = (map[row.type] ?? row.type) as QuestionRecord['type'];
-  const reportRef = useRef<HTMLDivElement | null>(null);
-
-  function handleExportCsv() {
-    try {
-      const rows = resultDetails.map((d, idx) => ({
-        index: idx + 1,
-        type: d.type,
-        question: d.stem,
-        correct: d.ok === null ? 'Ungraded' : (d.ok ? 'Yes' : 'No'),
-        score: d.score,
-        maxScore: d.pts,
-        your: Array.isArray(d.your) ? d.your.join('; ') : (typeof d.your === 'string' ? d.your : JSON.stringify(d.your)),
-        correctAns: Array.isArray(d.correct) ? d.correct.join('; ') : (typeof d.correct === 'string' ? d.correct : JSON.stringify(d.correct)),
-      }));
-      const headKeys = Object.keys(rows[0] || {index:1,type:'',question:'',correct:'',score:0,maxScore:0,your:'',correctAns:''});
-      const head = headKeys.join(',');
-      const body = rows.map(r => headKeys.map(k => `"${String((r as any)[k]).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([head + '\n' + body], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'combined_quiz_results.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error(e);
-      alert('Failed to export CSV');
-    }
-  }
-
-  async function handleDownloadPdf() {
-    const { buildResultsSummaryPdf } = await import('../utils/pdf');
-    const totalPts = questions.reduce((a,q)=>a+Number((q as any).points||0),0);
-    await buildResultsSummaryPdf({
-      quizTitle: 'Combined Quiz',
-      result: result || { score: 0, total: totalPts },
-      resultDetails: resultDetails as any,
-      meta: { date: new Date().toLocaleString() }
-    }, 'combined_quiz_summary.pdf');
-  }
-
-  function handleRetakeWrongOnly() {
-    const wrongIds = resultDetails.filter(d => d.ok === false).map(d => d.id);
-    if (!wrongIds.length) {
-      alert('No wrong answers to retake');
-      return;
-    }
-    const filtered = questions.filter(q => wrongIds.includes((q as any).id));
-    if (!filtered.length) {
-      alert('Could not filter questions');
-      return;
-    }
-    setDone(false);
-    setResult(null);
-    setResultDetails([]);
-    setIdx(0);
-    setAnswers({});
-    setQuestions(filtered as any);
-  }
-
 
           let meta: any = {};
           try {
@@ -248,6 +250,20 @@ export default function CombinedTakePage() {
         if (!hasValue(yourId)) dq("present", "mc_single: yourId empty", { qid: q.id, resp });
         const your = hasValue(yourId) ? (L.get(String(yourId)) ?? String(yourId)) : '';
 
+        // Preferred path: correctAnswers array of ids
+        if (Array.isArray(meta?.correctAnswers) && meta.correctAnswers.length > 0) {
+          const correctIds = meta.correctAnswers.map((x: any) => String(x));
+          const correctOpts = options.filter((o: any) => correctIds.includes(String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? '')));
+          let correctLabels = correctOpts.map((o: any) => o?.text ?? o?.label ?? o?.name ?? o?.title ?? String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? ''));
+          if (correctLabels.length === 0) {
+            dq("present", "mc_single: correctAnswers provided but no label match; falling back to IDs", { qid: q.id, correctIds });
+            correctLabels = correctIds;
+          }
+          const correct = correctLabels.length > 1 ? correctLabels : (correctLabels[0] ?? '');
+          return { your, correct };
+        }
+
+        // Legacy single-value fields
         let corrRaw: any =
           meta?.correct ??
           meta?.answer ??
@@ -300,8 +316,20 @@ export default function CombinedTakePage() {
         if (!yourIds.length) dq("present", "mc_multi: yourIds empty", { qid: q.id, resp });
         const your = yourIds.map((id) => L.get(String(id)) ?? String(id));
 
+        // Preferred: meta.correctAnswers as array of ids
+        if (Array.isArray(meta?.correctAnswers) && meta.correctAnswers.length > 0) {
+          const correctIds = meta.correctAnswers.map((x: any) => String(x));
+          const correctOpts = options.filter((o: any) => correctIds.includes(String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? '')));
+          let correctLabels = correctOpts.map((o: any) => o?.text ?? o?.label ?? o?.name ?? o?.title ?? String(o?.id ?? o?.value ?? o?.key ?? o?.text ?? ''));
+          if (correctLabels.length === 0) {
+            dq("present", "mc_multi: correctAnswers provided but no label matches; fallback to IDs", { qid: q.id, correctIds });
+            correctLabels = correctIds;
+          }
+          return { your, correct: correctLabels };
+        }
+
+        // Other legacy fields
         let corr: any[] =
-          (Array.isArray(meta?.correctAnswers) && meta.correctAnswers) ||
           (Array.isArray(meta?.correct) && meta.correct) ||
           (Array.isArray(meta?.answers) && meta.answers) ||
           [];
@@ -314,8 +342,9 @@ export default function CombinedTakePage() {
         }
         if ((!corr || corr.length === 0) && options.length) {
           corr = options
-            .filter((o: any) => truthyFlag(o?.correct) || truthyFlag(o?.isCorrect))
-            .map(getOptionId);
+            .filter((o: any) => truthyFlag(o?.correct) || truthyFlag(o?.isCorrect) || truthyFlag(o?.is_correct))
+            .map(getOptionId)
+            .map(String);
           dq("present", "mc_multi: derived from flags", { qid: q.id, corr });
         }
 
@@ -324,24 +353,41 @@ export default function CombinedTakePage() {
       }
 
       if (type === 'ordering') {
-        const items = Array.isArray(meta.items) ? meta.items : [];
-        const L = labelByIdFromList(items);
+        const opts = Array.isArray(meta.options) ? meta.options : (Array.isArray(meta.items) ? meta.items : (Array.isArray(meta.choices) ? meta.choices : []));
+        const L = labelByIdFromList(opts);
 
         const yourIds: string[] = Array.isArray(resp?.order) ? resp.order : [];
         if (!yourIds.length) dq("present", "ordering: yourIds empty", { qid: q.id, resp });
         const your = yourIds.map((id) => L.get(String(id)) ?? String(id));
 
+        // Preferred: meta.correctOrder as array of IDs
+        if (Array.isArray(meta?.correctOrder) && meta.correctOrder.length > 0) {
+          const correctLabels = meta.correctOrder.map((id: any) => {
+            const target = opts.find((x: any) => {
+              const candidates = [x?.id, x?.value, x?.key, x?.text].map((v) => String(v ?? ''));
+              return candidates.includes(String(id));
+            });
+            return target?.text ?? target?.label ?? target?.name ?? target?.title ?? String(id);
+          });
+          return { your, correct: correctLabels };
+        }
+
+        // Fallback: meta.order (labels/strings)
+        if (Array.isArray(meta?.order) && meta.order.length > 0) {
+          const correctLabels = meta.order.map((s: any) => String(s));
+          return { your, correct: correctLabels };
+        }
+
+        // Legacy or unknown: keep previous behavior
         let corr: any[] =
-          (Array.isArray(meta?.correctOrder) && meta.correctOrder) ||
-          (Array.isArray(meta?.order) && meta.order) ||
           (Array.isArray(meta?.correct) && meta.correct) ||
           [];
         const looksNumeric = corr.every((x) => Number.isInteger(Number(x)));
-        if (looksNumeric && items.length) {
+        if (looksNumeric && opts.length) {
           corr = corr
-            .map((n) => resolveIdFromIndex(items, Number(n)))
+            .map((n) => resolveIdFromIndex(opts, Number(n)))
             .filter((x): x is string => !!x);
-          dq("present", "ordering: mapped numeric correct → ids", { qid: q.id, corr });
+          dq("present", "ordering: mapped numeric correct → ids (legacy)", { qid: q.id, corr });
         }
         const correct = corr.map((id: any) => L.get(String(id)) ?? String(id));
         return { your, correct };
@@ -355,14 +401,18 @@ export default function CombinedTakePage() {
         const corrMap = (meta.correctMap ?? {}) as Record<string, string>;
 
         if (!left.length) dq("present", "matching: no left items", { qid: q.id });
-        const yourPairs = left.map((l: any) => ({
-          left: String(l?.text ?? l?.id ?? ''),
-          right: R.get(String(yourMap[String(l?.id ?? l?.text ?? '')])) ?? '',
-        }));
-        const correctPairs = left.map((l: any) => ({
-          left: String(l?.text ?? l?.id ?? ''),
-          right: R.get(String(corrMap[String(l?.id ?? l?.text ?? '')])) ?? '',
-        }));
+        const yourPairs = left.map((l: any) => {
+          const key = String(l?.id ?? l?.text ?? '');
+          const raw = String(yourMap[key] ?? '');
+          const label = R.get(raw) ?? raw; // fallback to raw id if no label
+          return { left: String(l?.text ?? l?.id ?? ''), right: label };
+        });
+        const correctPairs = left.map((l: any) => {
+          const key = String(l?.id ?? l?.text ?? '');
+          const raw = String(corrMap[key] ?? '');
+          const label = R.get(raw) ?? raw;
+          return { left: String(l?.text ?? l?.id ?? ''), right: label };
+        });
         return { your: yourPairs, correct: correctPairs };
       }
 
@@ -435,6 +485,8 @@ export default function CombinedTakePage() {
         pts,
         your: present.your,
         correct: present.correct,
+        // Include origin quiz title for PDF and UI rendering
+        ...(origin[q.id] ? { origin: titleById[origin[q.id]] || origin[q.id] } : {}),
       });
 
       score += earned;
@@ -488,7 +540,12 @@ export default function CombinedTakePage() {
             {current ? (
               <>
                 <div className="mb-4">
-                  <div className="text-base font-medium mb-2">{current.stem}</div>
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <div className="text-base font-medium">{current.stem}</div>
+                    {origin[current.id] && (
+                      <div className="text-xs text-gray-500 whitespace-nowrap">From quiz: <b>{titleById[origin[current.id]] || origin[current.id]}</b></div>
+                    )}
+                  </div>
                   <TakeQuestion
                     question={{ id: current.id, type: current.type, stem: current.stem, meta: current.meta }}
                     value={answers[current.id]}
@@ -549,6 +606,9 @@ export default function CombinedTakePage() {
                   <div>
                     <div className="text-sm text-gray-500">Q{i + 1} — {d.type}</div>
                     <div className="font-medium">{d.stem}</div>
+                    {origin[d.id] && (
+                      <div className="text-xs text-gray-500 mt-0.5">From quiz: <b>{titleById[origin[d.id]] || origin[d.id]}</b></div>
+                    )}
                   </div>
                   <div className={d.ok ? 'text-green-600' : 'text-red-600'}>
                     {d.ok === null ? 'Ungraded' : d.ok ? 'Correct' : 'Wrong'} ({d.score}/{d.pts})

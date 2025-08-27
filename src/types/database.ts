@@ -49,6 +49,8 @@ export interface Database {
           show_rationale: boolean;
           attempt_limit: number | null;
           settings: Record<string, any>;
+          archived: boolean; // new
+          folder: string | null; // new
           created_at: string;
           updated_at: string;
         };
@@ -70,6 +72,8 @@ export interface Database {
           show_rationale?: boolean;
           attempt_limit?: number | null;
           settings?: Record<string, any>;
+          archived?: boolean; // new
+          folder?: string | null; // new
           created_at?: string;
           updated_at?: string;
         };
@@ -91,6 +95,8 @@ export interface Database {
           show_rationale?: boolean;
           attempt_limit?: number | null;
           settings?: Record<string, any>;
+          archived?: boolean; // new
+          folder?: string | null; // new
           created_at?: string;
           updated_at?: string;
         };

@@ -265,7 +265,8 @@ function renderResponse(q: Question | undefined, response: any) {
   const type = (q as any).type;
   const meta = (q as any).meta ?? {};
   switch (type) {
-    case 'multiple_choice_single': {
+    case 'multiple_choice_single':
+    case 'mc_single': {
       const options = Array.isArray((meta as any).options) ? (meta as any).options : [];
       const lookup = new Map<string, string>();
       for (const op of options) {
@@ -277,7 +278,8 @@ function renderResponse(q: Question | undefined, response: any) {
       if (val == null || val === '') return '-';
       return lookup.get(String(val)) ?? `Option ${String(val)}`;
     }
-    case 'multiple_choice_multiple': {
+    case 'multiple_choice_multiple':
+    case 'mc_multi': {
       const options = Array.isArray((meta as any).options) ? (meta as any).options : [];
       const lookup = new Map<string, string>();
       for (const op of options) {
@@ -290,7 +292,13 @@ function renderResponse(q: Question | undefined, response: any) {
       if (!arr.length) return '-';
       return arr.map((id) => (lookup.has(id) ? String(lookup.get(id)) : `Option ${String(id)}`)).join(', ');
     }
-    case 'short_answer': {
+    case 'short_answer':
+    case 'short_text': {
+      const txt = response?.text ?? response;
+      return (txt == null || txt === '') ? '-' : String(txt);
+    }
+    case 'open':
+    case 'open_question': {
       const txt = response?.text ?? response;
       return (txt == null || txt === '') ? '-' : String(txt);
     }

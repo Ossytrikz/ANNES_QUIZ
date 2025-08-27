@@ -1,13 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
+import { useAuth } from '../../context/AuthProvider';
 
 type UserLike = { email?: string; user_metadata?: Record<string, any> } | null;
-let useAuthHook: any;
-try { useAuthHook = require('../../hooks/useAuth'); } catch { useAuthHook = null; }
 
 export default function TopBar() {
-  const useAuth = useAuthHook?.useAuth ?? (() => ({ user: null }));
-  const { user } = useAuth() as { user: UserLike };
+  const { user, loading } = useAuth() as { user: UserLike, loading: boolean };
 
   const firstName = useMemo(() => {
     const meta = user?.user_metadata || {};
@@ -36,11 +34,16 @@ export default function TopBar() {
           </span>
           <span className="text-lg font-semibold text-pink-200">Anne&apos;s Quiz</span>
         </Link>
-        <div className="flex items-center gap-3">          <a href="/console" className="px-3 py-1.5 rounded-lg border text-sm hover:bg-white/10">Console</a>
+        <div className="flex items-center gap-3">
+          <a href="/console" className="px-3 py-1.5 rounded-lg border text-sm hover:bg-white/10">Console</a>
           <span className="hidden sm:inline text-sm text-pink-200/90">{user ? `Welcome ${firstName}` : ''}</span>
-          <Link to={user ? '/dashboard' : '/auth'} className="px-3 py-1.5 rounded-lg bg-pink-600 text-white text-sm hover:bg-pink-700">
-            {user ? 'My dashboard' : 'Sign in'}
-          </Link>
+          {loading ? (
+            <span className="inline-block h-[30px] w-[110px] rounded-lg bg-white/10 animate-pulse" />
+          ) : (
+            <Link to={user ? '/dashboard' : '/login'} className="px-3 py-1.5 rounded-lg bg-pink-600 text-white text-sm hover:bg-pink-700">
+              {user ? 'My dashboard' : 'Sign in'}
+            </Link>
+          )}
         </div>
       </div>
     </header>

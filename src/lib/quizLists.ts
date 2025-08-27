@@ -1,8 +1,8 @@
-import { supabase } from './supabase';
+import { supabase } from './supabaseClient';
 import type { Quiz } from '../types/database';
 
 /** Keep the same fields everywhere to avoid schema drift */
-export const QUIZ_FIELDS = 'id,title,description,owner_id,created_at,visibility';
+export const QUIZ_FIELDS = 'id,title,description,owner_id,created_at,visibility,archived,folder';
 
 /** Server-side search helper */
 function applySearch(q: any, term: string) {
@@ -18,7 +18,7 @@ export async function listPublicQuizzes(term: string): Promise<Quiz[]> {
   // Primary: visibility in ('public','unlisted') ordered by created_at (matches Dashboard)
   try {
     const { data, error } = await applySearch(
-      supabase.from('quizzes').select(QUIZ_FIELDS).in('visibility', ['public','unlisted']),
+      supabase().from('quizzes').select(QUIZ_FIELDS).in('visibility', ['public','unlisted']),
       term
     )
       .order('created_at', { ascending: false })
@@ -28,7 +28,7 @@ export async function listPublicQuizzes(term: string): Promise<Quiz[]> {
   // Fallback: is_public = true (some schemas use a boolean instead)
   try {
     const { data, error } = await applySearch(
-      supabase.from('quizzes').select(QUIZ_FIELDS).eq('is_public', true),
+      supabase().from('quizzes').select(QUIZ_FIELDS).eq('is_public', true),
       term
     )
       .order('created_at', { ascending: false })
@@ -37,7 +37,7 @@ export async function listPublicQuizzes(term: string): Promise<Quiz[]> {
   } catch {}
   // Last resort: no visibility filter
   const { data } = await applySearch(
-    supabase.from('quizzes').select(QUIZ_FIELDS),
+    supabase().from('quizzes').select(QUIZ_FIELDS),
     term
   )
     .order('created_at', { ascending: false })
@@ -51,7 +51,7 @@ export async function listOwnedQuizzes(userId: string | null): Promise<Quiz[]> {
   const cols = ['owner_id','user_id','created_by'];
   for (const col of cols) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase()
         .from('quizzes')
         .select(QUIZ_FIELDS)
         .eq(col, userId)
@@ -71,7 +71,7 @@ export async function listCollabQuizzes(userId: string | null): Promise<Quiz[]> 
   if (!tables.length) return [];
   for (const tbl of tables) {
     try {
-      const { data: links, error } = await supabase
+      const { data: links, error } = await supabase()
         .from(tbl)
         .select('quiz_id')
         .eq('user_id', userId)
@@ -79,7 +79,7 @@ export async function listCollabQuizzes(userId: string | null): Promise<Quiz[]> 
       if (!error && Array.isArray(links) && links.length > 0) {
         const ids = links.map((r: any) => r.quiz_id).filter(Boolean);
         if (ids.length) {
-          const { data: qs } = await supabase
+          const { data: qs } = await supabase()
             .from('quizzes')
             .select(QUIZ_FIELDS)
             .in('id', ids)

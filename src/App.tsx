@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -11,7 +11,6 @@ import ProfilePage from './pages/Profile';
 import QuizSetupPage from './pages/QuizSetup';
 import QuizCreatePage from './pages/QuizCreate';
 import QuizEditorPage from './pages/QuizEditor';
-import QuizTakePage from './pages/QuizTake';
 import TakeRedirect from './pages/TakeRedirect';
 import QuizConsole from './pages/QuizConsole';
 import CombinedTakePage from './pages/CombinedTake';
@@ -85,6 +84,8 @@ const AppContent = () => {
               <Route path="/quizzes" element={<ExplorePage />} />
               <Route path="/quizzes/setup" element={<QuizSetupPage />} />
               <Route path="/quizzes/new" element={<QuizCreatePage />} />
+              {/* Alias to avoid 404s from older links/buttons */}
+              <Route path="/quizzes/create" element={<QuizCreatePage />} />
               <Route path="/quizzes/:id/edit" element={<QuizEditorPage />} />
               <Route path="/quizzes/:id/preview" element={<QuizPreviewPage />} />
               <Route path="/quizzes/:id/take" element={<TakeRedirect/>} />

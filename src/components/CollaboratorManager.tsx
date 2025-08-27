@@ -110,7 +110,7 @@ export function CollaboratorManager({ quizId, isOwner }: CollaboratorManagerProp
         {collaborators?.map((collaborator) => (
           <div key={collaborator.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 border rounded-lg">
             <div className="mb-2 sm:mb-0">
-              <span className="font-medium">{collaborator.profiles?.email || 'Unknown user'}</span>
+              <span className="font-medium">{collaborator.user?.email || 'Unknown user'}</span>
               <span className="ml-2 text-sm text-gray-500">
                 ({collaborator.role} {collaborator.role === 'owner' ? '👑' : ''})
               </span>

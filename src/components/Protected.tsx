@@ -1,6 +1,5 @@
-import React from 'react'
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '@/context/AuthProvider'
+import { useAuth } from '../context/AuthProvider'
 
 export default function Protected({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth()
