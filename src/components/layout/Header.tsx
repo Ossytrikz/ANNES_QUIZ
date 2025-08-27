@@ -6,7 +6,9 @@ import ThemeToggle from '../theme/ThemeToggle';
 
 export function Header() {
   const { user, loading } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Separate states to avoid collisions on mobile
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const navigate = useNavigate();
 
   const initials = ((user as any)?.user_metadata?.full_name || user?.email || 'U')
@@ -42,9 +44,9 @@ export function Header() {
 
           {/* Mobile menu toggle */}
           <button type="button" className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
-            onClick={() => setIsMenuOpen((v) => !v)}
-            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}>
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            onClick={() => { setIsMobileOpen((v) => !v); setIsAccountOpen(false); }}
+            aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}>
+            {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
           <ThemeToggle />
@@ -54,28 +56,35 @@ export function Header() {
           ) : user ? (
             <div className="relative">
               <button type="button" className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"
-                onClick={() => setIsMenuOpen((v) => !v)}
+                onClick={() => { setIsAccountOpen((v) => !v); setIsMobileOpen(false); }}
                 aria-label="Open account menu">
                 <span className="text-xs font-bold">{initials}</span>
               </button>
 
-              {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded border bg-white dark:bg-gray-900 shadow-lg z-40">
+              {isAccountOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded border bg-white dark:bg-gray-900 shadow-lg z-50">
                   <div className="px-3 py-2 text-xs text-gray-500">{(user as any)?.user_metadata?.full_name || user.email}</div>
                   <button className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
-                    onClick={() => { setIsMenuOpen(false); navigate('/'); }}>
+                    onClick={() => { setIsAccountOpen(false); setIsMobileOpen(false); navigate('/'); }}>
                     <LayoutGrid className="h-4 w-4" /> Dashboard
                   </button>
                   <button className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
-                    onClick={() => { setIsMenuOpen(false); navigate('/console'); }}>
+                    onClick={() => { setIsAccountOpen(false); setIsMobileOpen(false); navigate('/console'); }}>
                     <Settings className="h-4 w-4" /> Console
                   </button>
                   <button className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
-                    onClick={() => { setIsMenuOpen(false); navigate('/account'); }}>
+                    onClick={() => { setIsAccountOpen(false); setIsMobileOpen(false); navigate('/account'); }}>
                     <User className="h-4 w-4" /> Account
                   </button>
                   <button className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
-                    onClick={async () => { setIsMenuOpen(false); try { const { supabase } = await import('../../lib/supabaseClient'); await supabase().auth.signOut({ scope: 'local' as any }); } catch {} }}>
+                    onClick={async () => {
+                      setIsAccountOpen(false); setIsMobileOpen(false);
+                      try {
+                        const { supabase } = await import('../../lib/supabaseClient');
+                        await supabase().auth.signOut({ scope: 'local' as any });
+                        navigate('/');
+                      } catch {}
+                    }}>
                     <LogOut className="h-4 w-4" /> Sign out
                   </button>
                 </div>
@@ -91,15 +100,18 @@ export function Header() {
       </div>
 
       {/* Mobile nav drawer */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t">
-          <nav className="container py-2 grid gap-2">
-            <Link to="/" onClick={() => setIsMenuOpen(false)} className="px-3 py-2 rounded border inline-flex items-center gap-2"><LayoutGrid className="h-4 w-4"/> Dashboard</Link>
-            <Link to="/console" onClick={() => setIsMenuOpen(false)} className="px-3 py-2 rounded border inline-flex items-center gap-2"><Settings className="h-4 w-4"/> Console</Link>
+      {isMobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileOpen(false)} aria-hidden="true" />
+          {/* Drawer */}
+          <nav className="absolute top-14 inset-x-0 border-t bg-white/95 dark:bg-gray-900/95 backdrop-blur container py-2 grid gap-2">
+            <Link to="/" onClick={() => setIsMobileOpen(false)} className="px-3 py-2 rounded border inline-flex items-center gap-2"><LayoutGrid className="h-4 w-4"/> Dashboard</Link>
+            <Link to="/console" onClick={() => setIsMobileOpen(false)} className="px-3 py-2 rounded border inline-flex items-center gap-2"><Settings className="h-4 w-4"/> Console</Link>
             {!user && (
               <>
-                <Link to="/login" onClick={() => setIsMenuOpen(false)} className="px-3 py-2 rounded border">Sign in</Link>
-                <Link to="/signup" onClick={() => setIsMenuOpen(false)} className="px-3 py-2 rounded bg-primary text-white">Sign up</Link>
+                <Link to="/login" onClick={() => setIsMobileOpen(false)} className="px-3 py-2 rounded border">Sign in</Link>
+                <Link to="/signup" onClick={() => setIsMobileOpen(false)} className="px-3 py-2 rounded bg-primary text-white">Sign up</Link>
               </>
             )}
           </nav>
