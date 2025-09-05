@@ -71,6 +71,66 @@ function shuffleOnce<T>(arr: T[], seedKey: string): T[] {
   return a;
 }
 
+function normalizeOptions(meta: any): any[] {
+  if (!meta) return [];
+  if (Array.isArray(meta.options)) return meta.options;
+  // Support object map in meta.options: { A: 'x', B: 'y' }
+  if (meta.options && typeof meta.options === 'object' && !Array.isArray(meta.options)) {
+    const entries = Object.entries(meta.options as Record<string, any>);
+    if (entries.length) return entries.map(([k, v]) => ({ id: String(k), text: String(v) }));
+  }
+  if (Array.isArray(meta.choices)) return meta.choices;
+  if (Array.isArray(meta.items)) return meta.items; // fallback
+  // Broad legacy scan: find any plausible options array in meta
+  try {
+    const bannedKeys = new Set(['items', 'left', 'right', 'correct', 'correctIds', 'correctOrder', 'order', 'answer', 'answers']);
+    for (const k of Object.keys(meta)) {
+      if (bannedKeys.has(k)) continue;
+      const v = (meta as any)[k];
+      // Array case
+      if (Array.isArray(v) && v.length > 0) {
+        const first = v[0];
+        const isPrimitive = typeof first === 'string' || typeof first === 'number' || typeof first === 'boolean';
+        const isChoiceLike = first && typeof first === 'object' && (
+          'text' in first || 'label' in first || 'name' in first || 'value' in first || 'id' in first
+        );
+        if (isPrimitive || isChoiceLike) return v;
+      }
+      // Object map case
+      if (v && typeof v === 'object') {
+        const entries = Object.entries(v as Record<string, any>);
+        if (entries.length) {
+          const [, firstV] = entries[0];
+          const isPrimitive = typeof firstV === 'string' || typeof firstV === 'number' || typeof firstV === 'boolean';
+          const isChoiceLike = firstV && typeof firstV === 'object' && (
+            'text' in firstV || 'label' in firstV || 'name' in firstV || 'value' in firstV || 'id' in firstV
+          );
+          if (isPrimitive || isChoiceLike) return entries.map(([k2, v2]) => ({ id: String(k2), text: String(v2) }));
+        }
+      }
+    }
+  } catch {}
+  return [];
+}
+
+// Normalize any incoming option shape into { id: string, text: string }
+function toChoiceObjects(meta: any): Array<{ id: string; text: string }> {
+  const raw = normalizeOptions(meta);
+  return raw
+    .map((opt: any, idx: number) => {
+      if (opt == null) return null;
+      // If it's a primitive (string/number), use it for both id and text
+      if (typeof opt === 'string' || typeof opt === 'number' || typeof opt === 'boolean') {
+        return { id: String(opt), text: String(opt) };
+      }
+      // If it's an object, try common fields
+      const idCandidate = opt.id ?? opt.value ?? opt.key ?? idx;
+      const textCandidate = opt.text ?? opt.label ?? opt.name ?? opt.value ?? opt.id ?? String(idCandidate);
+      return { id: String(idCandidate), text: String(textCandidate) };
+    })
+    .filter(Boolean) as Array<{ id: string; text: string }>;
+}
+
 const MCSingle = React.memo(function MCSingle({
   qid,
   meta,
@@ -84,9 +144,14 @@ const MCSingle = React.memo(function MCSingle({
 }) {
   const name = `mc-${qid}`;
   const options = useMemo(() => {
-    const opts = Array.isArray(meta?.options) ? meta.options : [];
-    return meta?.shuffleOptions ? shuffleOnce(opts, qid) : opts;
-  }, [meta?.options, meta?.shuffleOptions, qid]);
+    const base = toChoiceObjects(meta);
+    const shouldShuffle = meta?.shuffleOptions !== false; // default: shuffle unless explicitly disabled
+    if (!shouldShuffle) return base;
+    const shuffled = shuffleOnce(base, qid);
+    // If shuffle produced same order (rare but possible with small sets), rotate by 1
+    const same = shuffled.length === base.length && shuffled.every((x, i) => x.id === base[i].id);
+    return same && shuffled.length > 1 ? [...shuffled.slice(1), shuffled[0]] : shuffled;
+  }, [meta, meta?.shuffleOptions, qid]);
 
   const pick = useCallback((id: string) => () => onChange(id), [onChange]);
 
@@ -104,7 +169,7 @@ const MCSingle = React.memo(function MCSingle({
               onChange={pick(opt.id)}
               className="mr-2"
             />
-            {String(opt?.text ?? opt)}
+            {opt.text}
           </label>
         );
       })}
@@ -124,9 +189,13 @@ const MCMulti = React.memo(function MCMulti({
   onChange: (choices: string[]) => void;
 }) {
   const options = useMemo(() => {
-    const opts = Array.isArray(meta?.options) ? meta.options : [];
-    return meta?.shuffleOptions ? shuffleOnce(opts, qid) : opts;
-  }, [meta?.options, meta?.shuffleOptions, qid]);
+    const base = toChoiceObjects(meta);
+    const shouldShuffle = meta?.shuffleOptions !== false; // default: shuffle unless explicitly disabled
+    if (!shouldShuffle) return base;
+    const shuffled = shuffleOnce(base, qid);
+    const same = shuffled.length === base.length && shuffled.every((x, i) => x.id === base[i].id);
+    return same && shuffled.length > 1 ? [...shuffled.slice(1), shuffled[0]] : shuffled;
+  }, [meta, meta?.shuffleOptions, qid]);
 
   const setArr = Array.isArray(value) ? value : [];
   const toggle = useCallback(
@@ -142,7 +211,7 @@ const MCMulti = React.memo(function MCMulti({
       {options.map((opt: any) => (
         <label key={opt.id} className="block cursor-pointer">
           <input type="checkbox" checked={setArr.includes(opt.id)} onChange={toggle(opt.id)} className="mr-2" />
-          {String(opt?.text ?? opt)}
+          {opt.text}
         </label>
       ))}
     </div>
@@ -150,15 +219,27 @@ const MCMulti = React.memo(function MCMulti({
 });
 
 const Ordering = React.memo(function Ordering({
+  qid,
+  meta,
   items,
   value,
   onChange,
 }: {
+  qid: string;
+  meta: any;
   items: Array<{ id: string; text: string }>;
   value: string[] | undefined;
   onChange: (order: string[]) => void;
 }) {
-  const initial = useMemo(() => items.map((i) => i.id), [items]);
+  const initialIds = useMemo(() => items.map((i) => i.id), [items]);
+  const shouldShuffle = useMemo(() => {
+    // Respect explicit flags; default to true when undefined
+    let flag = meta?.shuffleItems;
+    if (flag === undefined) flag = meta?.shuffleOptions;
+    if (flag === undefined) flag = meta?.shuffle;
+    return flag !== false;
+  }, [meta?.shuffleItems, meta?.shuffleOptions, meta?.shuffle]);
+  const initial = useMemo(() => (shouldShuffle ? shuffleOnce(initialIds, qid) : initialIds), [initialIds, qid, shouldShuffle]);
   const order = Array.isArray(value) && value.length === items.length ? value : initial;
 
   const move = useCallback(
@@ -270,6 +351,8 @@ export default function TakeQuestion({ question, value, onChange }: TakeQuestion
       const items = Array.isArray(question.meta?.items) ? question.meta.items : [];
       return (
         <Ordering
+          qid={question.id}
+          meta={question.meta}
           items={items}
           value={Array.isArray(value?.order) ? (value.order as string[]) : undefined}
           onChange={(order) => onChange({ order })}

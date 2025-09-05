@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -59,6 +59,29 @@ function resolveIdFromIndex(list: any[], idx: number): string | null {
   return String(it?.id ?? it?.value ?? it?.key ?? it?.text ?? '');
 }
 
+function shuffleOnce<T>(arr: T[], seedKey: string): T[] {
+  let seed = 0;
+  for (let i = 0; i < seedKey.length; i++) seed = (seed * 31 + seedKey.charCodeAt(i)) >>> 0;
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const j = seed % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Per-session stable seed. Changes across sessions, stable during one session
+function getSessionSeed(scopeKey: string): string {
+  const k = `combined_quiz_seed:${scopeKey}`;
+  let v = sessionStorage.getItem(k);
+  if (!v) {
+    v = Math.random().toString(36).slice(2);
+    sessionStorage.setItem(k, v);
+  }
+  return v;
+}
+
 export default function CombinedTakePage() {
   const { user } = useAuth();
   const loc = useLocation();
@@ -76,6 +99,10 @@ export default function CombinedTakePage() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [idx, setIdx] = useState(0);
   const [filterQuiz, setFilterQuiz] = useState<string>('all');
+
+  // Per-question immediate feedback state
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState<null | { ok: boolean | null; your: any; correct: any }>(null);
 
   const [done, setDone] = useState(false);
   const [result, setResult] = useState<{ score: number; total: number } | null>(null);
@@ -179,7 +206,7 @@ export default function CombinedTakePage() {
 
         if (e2 || !qrows) throw new Error('Failed to load questions');
 
-        const list = (qrows as any[]).map((row) => {
+        let list = (qrows as any[]).map((row) => {
           const map: Record<string, QuestionRecord['type']> = {
             multiple_choice_single: 'mc_single',
             multiple_choice_multiple: 'mc_multi',
@@ -197,6 +224,23 @@ export default function CombinedTakePage() {
 
           return { id: row.id, type, stem: row.stem, meta, points: row.points } as QuestionRecord;
         });
+
+        // More aggressive shuffle: seed with combined ids + user id + per-session seed
+        const seedKey = ids.join(',');
+        const seed = `${seedKey}:${user?.id ?? 'anon'}:${getSessionSeed(seedKey)}`;
+        
+        console.log('Questions before shuffle:', list.map(q => ({ id: q.id, stem: q.stem })));
+        
+        const shuffled = shuffleOnce([...list], seed);
+        // Force a different order if shuffle didn't change anything
+        const sameOrder = shuffled.every((q, i) => q.id === list[i]?.id);
+        if (sameOrder && shuffled.length > 1) {
+          console.log('Shuffle resulted in same order, rotating...');
+          shuffled.push(shuffled.shift()!);
+        }
+        list = shuffled;
+        
+        console.log('Questions after shuffle:', list.map(q => ({ id: q.id, stem: q.stem })));
 
         const mapOrigin: Record<string, string> = {};
         for (const r of qrows as any[]) mapOrigin[r.id] = r.quiz_id;
@@ -233,6 +277,11 @@ export default function CombinedTakePage() {
 
   const onChangeAnswer = (qid: string, value: any) => {
     setAnswers((prev) => ({ ...prev, [qid]: value }));
+    // Reset feedback whenever the current question's answer changes
+    if (filteredQuestions[idx]?.id === qid) {
+      setShowFeedback(false);
+      setFeedback(null);
+    }
   };
 
   /** Build "Your vs Correct" presentation with id/label/index fallbacks + debug */
@@ -506,6 +555,37 @@ export default function CombinedTakePage() {
   const next = () => canNext && setIdx((i) => i + 1);
   const prev = () => canPrev && setIdx((i) => i - 1);
 
+  // Reset feedback when moving between questions or changing filter
+  useEffect(() => {
+    setShowFeedback(false);
+    setFeedback(null);
+  }, [idx, filterQuiz]);
+
+  function handleCheckOrNext() {
+    const q = current;
+    if (!q) return;
+    if (!showFeedback) {
+      const resp = answers[q.id];
+      // Require an answer before checking
+      const hasResp = !(resp == null || (typeof resp === 'object' && Object.keys(resp).length === 0) || (Array.isArray(resp) && resp.length === 0) || resp === '');
+      if (!hasResp) {
+        toast.error('Please provide an answer before checking.');
+        return;
+      }
+      const res = grade(q, resp);
+      const present = presentYourAndCorrect(q, resp);
+      setFeedback({ ok: res.isCorrect as boolean | null, your: present.your, correct: present.correct });
+      setShowFeedback(true);
+    } else {
+      // Continue to next question
+      if (canNext) {
+        next();
+      }
+      setShowFeedback(false);
+      setFeedback(null);
+    }
+  }
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div className="text-red-600">{error}</div>;
   if (!questions.length) return <div>No questions found.</div>;
@@ -549,9 +629,51 @@ export default function CombinedTakePage() {
                   <TakeQuestion
                     question={{ id: current.id, type: current.type, stem: current.stem, meta: current.meta }}
                     value={answers[current.id]}
-                    onChange={(v) => setAnswers((prev) => ({ ...prev, [current.id]: v }))}
+                    onChange={(v) => onChangeAnswer(current.id, v)}
                   />
                 </div>
+
+                {showFeedback && feedback && (
+                  <div className={`mb-4 rounded border p-3 ${feedback.ok === true ? 'border-green-300 bg-green-50 text-green-700' : 'border-red-300 bg-red-50 text-red-700'}`}>
+                    <div className="font-medium mb-1">{feedback.ok === true ? 'Correct!' : (feedback.ok === false ? 'Not quite.' : 'Checked')}</div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <div className="text-xs uppercase opacity-75">Your Answer</div>
+                        {Array.isArray(feedback.your) ? (
+                          <ul className="list-disc pl-5">
+                            {feedback.your.map((t: any, k: number) => (
+                              <li key={k}>{String(t)}</li>
+                            ))}
+                          </ul>
+                        ) : typeof feedback.your === 'object' && feedback.your ? (
+                          <pre className="text-sm bg-white/50 p-2 rounded">{JSON.stringify(feedback.your, null, 2)}</pre>
+                        ) : (
+                          <div>{String(feedback.your ?? '')}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase opacity-75">Correct Answer</div>
+                        {Array.isArray(feedback.correct) ? (
+                          <ul className="list-disc pl-5">
+                            {feedback.correct.map((t: any, k: number) => (
+                              <li key={k}>{String(t)}</li>
+                            ))}
+                          </ul>
+                        ) : typeof feedback.correct === 'object' && feedback.correct ? (
+                          <pre className="text-sm bg-white/50 p-2 rounded">{JSON.stringify(feedback.correct, null, 2)}</pre>
+                        ) : (
+                          <div>{String(feedback.correct ?? '')}</div>
+                        )}
+                      </div>
+                    </div>
+                    {questions.find((q) => q.id === current.id)?.meta?.explanation && (
+                      <div className="mt-2 text-sm">
+                        <span className="font-medium">Explanation: </span>
+                        {String(questions.find((q) => q.id === current.id)?.meta?.explanation)}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <button
@@ -564,10 +686,10 @@ export default function CombinedTakePage() {
                   <div className="space-x-2">
                     <button
                       className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                      onClick={next}
-                      disabled={!canNext}
+                      onClick={handleCheckOrNext}
+                      disabled={!canNext && showFeedback}
                     >
-                      Next
+                      {showFeedback ? (canNext ? 'Continue' : 'Finish Review') : 'Check'}
                     </button>
                     <button
                       className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
